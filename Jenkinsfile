@@ -2,53 +2,56 @@ pipeline {
     agent any
 
     environment {
-        // Variáveis de ambiente, como porta da API ou credenciais, se necessário
-        API_PORT = '3000'
+        // Defina a variável de ambiente para a versão da API
+        VERSION = "1.0.0"
+        IMAGE_NAME = "meu-api-node"
+        DOCKER_REGISTRY = "localhost:5000"  // Defina seu registry Docker, se necessário
     }
 
     stages {
         stage('Checkout') {
             steps {
                 echo 'Fazendo checkout do código...'
-                git 'https://github.com/dudssecco/Api-Jenkins'  // Se for GitHub
-                // Ou use 'dir("/caminho/para/o/repo")' se for local
+                git 'https://github.com/dudssecco/Api-Jenkins'  // Substitua com seu repositório
             }
         }
 
-        stage('Instalar dependências') {
+        stage('Instalar Dependências') {
             steps {
                 echo 'Instalando dependências...'
-                sh 'npm install'  // Caso sua API seja em Node.js
-                // Ou 'pip install -r requirements.txt' para Python, etc.
+                sh 'npm install'
             }
         }
 
         stage('Rodar Testes') {
             steps {
-                echo 'Executando testes...'
-                // sh 'npm test'  // Substitua por seu comando de teste
+                echo 'Executando os testes...'
+                sh 'npm test'  // Substitua pelo comando adequado para os testes da sua API
             }
         }
 
-        stage('Rodar API') {
+        stage('Construir Imagem Docker') {
             steps {
-                echo 'Iniciando a API...'
-                sh 'npm start &'  // Ou o comando específico para iniciar sua API
+                echo 'Construindo a imagem Docker...'
+                script {
+                    dockerImage = docker.build("${IMAGE_NAME}:${VERSION}")
+                }
             }
         }
 
-        stage('Verificar API') {
+        stage('Rodar API em Docker') {
             steps {
-                echo 'Verificando se a API está rodando...'
-                // Aqui você pode rodar um comando curl para verificar se a API está no ar
-                sh 'curl http://localhost:${API_PORT}/status'
+                echo 'Rodando a API dentro de um container Docker...'
+                script {
+                    dockerImage.run("-d -p 3000:3000")  // Substitua a porta conforme sua configuração
+                }
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline executada com sucesso!'
+            echo 'Pipeline executado com sucesso!'
         }
         failure {
             echo 'Pipeline falhou!'
